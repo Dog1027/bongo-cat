@@ -3,19 +3,26 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
+#include <esp_sleep.h>
 #include "cat.h"
 #include "heartQueue.h"
 
 #define SCREEN_WIDTH 128 // OLED 寬度像素
 #define SCREEN_HEIGHT 64 // OLED 高度像素
 
-// 設定OLED
-#define OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define PIN_LEFT 1
+#define PIN_RIGHT 2
+#define PIN_OLED_SDA 3
+#define PIN_OLED_SCL 4
+#define PIN_OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define OLED_I2C_ADDR 0x3C
 
-#define FRAME_INTERVAL 10
-#define COUNT_DOWN_TIME 10
-#define IDLE_DELAY_RATIO 3
+Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
+
+#define IDLE_INTERVAL_MS 100
+#define PREP_WAIT_MS 2000
+#define TAP_INTERVAL_MS 300
+
 #define HEART_IMG_LIFE hollowHeartBoomLargerAllArray_LEN - 1
 #define HEART_IMG_WIDTH hollowHeartBoomLargerAllArray_W
 #define HEART_IMG_HEIGHT hollowHeartBoomLargerAllArray_H
@@ -28,12 +35,7 @@ Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define HEART_IMG_X_RANDOM 25
 #define HEART_IMG_Y_RANDOM 24
 
-#define PIN_RIGHT 2
-#define PIN_LEFT 1
-
-#define OLED_I2C_SDA 3
-#define OLED_I2C_SCL 4
-#define OLED_I2C_ADDR 0x3C
+#define INACTIVITY_SLEEP_MS (30UL * 1000UL)
 
 enum catState {
     IDLE,
@@ -69,22 +71,27 @@ enum catTap {
     TAP_BOTH,
 };
 
+enum {
+    LEFT = 0,
+    RIGHT = 1,
+};
+
 HeartQueue heartQueue;
 
-enum catState catState = IDLE;
-uint8_t catTapRecord = TAP_NONE;
 uint8_t catTap = TAP_NONE;
 uint8_t catImgState = IMG_NONE;
-bool stateInit = false;
+
 unsigned long tapCount = 0;
+unsigned long lastActivityMillis = 0;
 
 void readKey(void);
 void catLogic(void);
 void imgProcess(void);
-void idleState(void);
-void prepState(void);
-void tapState(void);
-void appendHeart(bool rightOrLeft);
+enum catState idleState(bool init);
+enum catState prepState(bool init);
+enum catState tapState(bool init);
+void appendHeart(int leftRight);
+void goToDeepSleep(void);
 
 void setup()
 {
@@ -93,7 +100,7 @@ void setup()
     pinMode(PIN_RIGHT, INPUT_PULLUP);
     pinMode(PIN_LEFT, INPUT_PULLUP);
 
-    Wire.setPins(OLED_I2C_SDA, OLED_I2C_SCL);
+    Wire.setPins(PIN_OLED_SDA, PIN_OLED_SCL);
 
     if (!display.begin(OLED_I2C_ADDR, false)) {
         Serial.println(F("SH1106 allocation failed"));
@@ -104,19 +111,20 @@ void setup()
 
     display.clearDisplay();
     Serial.println(F("OLED init success"));
+
+    lastActivityMillis = millis();
 }
 
 void loop()
 {
-    // static unsigned long timePrevious = 0;
-    // unsigned long time = millis();
-    // if ((time - timePrevious) > FRAME_INTERVAL) {
-    //   timePrevious = time;
     readKey();
     heartQueue.process();
     catLogic();
     imgProcess();
-    // }
+
+    if (millis() - lastActivityMillis >= INACTIVITY_SLEEP_MS) {
+        goToDeepSleep();
+    }
 }
 
 void imgProcess()
@@ -135,7 +143,6 @@ void imgProcess()
         display.println(F("Error: No cat image"));
     }
 
-    // display.setTextSize(2); // Draw 2X-scale text
     display.setTextColor(SH110X_WHITE);
     display.setCursor(10, 0);
     display.println(tapCount);
@@ -144,143 +151,188 @@ void imgProcess()
 
 void catLogic()
 {
-    if (catTap)
-        catTapRecord = catTap;
-    switch (catState) {
+    static enum catState lastState = IDLE;
+    static bool stateInit = true;
+    enum catState nextState;
+
+    switch (lastState) {
     case IDLE:
-        idleState();
+        nextState = idleState(stateInit);
         break;
     case PREP:
-        prepState();
+        nextState = prepState(stateInit);
         break;
     case TAP:
-        tapState();
+        nextState = tapState(stateInit);
         break;
+    default:
+        nextState = IDLE;
+    }
+    stateInit = false;
+
+    if (lastState != nextState) {
+        lastState = nextState;
+        stateInit = true;
     }
 }
 
-void idleState()
+enum catState idleState(bool init)
 {
-    static uint8_t delay = 0;
-    if (stateInit) {
-        stateInit = false;
-        catImgState = IMG_NONE;
-        delay = 0;
-    }
+    static unsigned long lastMillis = 0;
 
-    // img state process
-    if (delay % IDLE_DELAY_RATIO == 0)
-        catImgState += 1;
-    if (catImgState > IMG_IDLE_END)
+    if (init) {
         catImgState = IMG_IDLE_START;
-
-    delay++;
-
-    if (catTapRecord != TAP_NONE) {
-        catState = PREP;
-        stateInit = true;
+        lastMillis = millis();
     }
+
+    if (millis() - lastMillis >= IDLE_INTERVAL_MS) {
+        lastMillis = millis();
+
+        catImgState++;
+        if (catImgState > IMG_IDLE_END) {
+            catImgState = IMG_IDLE_START;
+        }
+    }
+
+    if (catTap != TAP_NONE) {
+        return TAP;
+    }
+
+    return IDLE;
 }
 
-void prepState()
+enum catState prepState(bool init)
 {
-    static uint8_t prepCountDown = COUNT_DOWN_TIME;
-    if (stateInit) {
-        stateInit = false;
+    static unsigned long lastMillis = 0;
+
+    if (init) {
+        catImgState = IMG_PREPARE;
+        lastMillis = millis();
     }
 
-    // img state process
-    catImgState = IMG_PREPARE;
-
-    prepCountDown--;
-    if (prepCountDown == 0) {
-        catState = IDLE;
-        stateInit = true;
+    if (millis() - lastMillis >= PREP_WAIT_MS) {
+        lastMillis = millis();
+        return IDLE;
     }
 
-    if (catTapRecord != TAP_NONE) {
-        catState = TAP;
-        stateInit = true;
-        prepCountDown = COUNT_DOWN_TIME;
+    if (catTap != TAP_NONE) {
+        return TAP;
     }
+
+    return PREP;
 }
 
-void tapState()
+enum catState tapState(bool init)
 {
-    static uint8_t catImgStatePre = IMG_NONE;
-    if (stateInit) {
-        stateInit = false;
-        catImgStatePre = IMG_NONE;
+    static unsigned long lastMillis = 0;
+
+    if (init) {
+        if (catTap == TAP_NONE) {
+            return PREP;
+        }
+        catImgState = IMG_TAP + (catTap - 1) * 2;
+        lastMillis = millis();
     }
 
-    // img state process
-    switch (catImgStatePre) {
-    case IMG_NONE:
-        catImgState = IMG_TAP + (catTapRecord - 1) * 2;
-        break;
-    case IMG_TAP_L:
-        tapCount++;
-        appendHeart(false);
-        catImgState = IMG_TAP_LD;
-    case IMG_TAP_LD:
-        if (catTapRecord == TAP_BOTH)
-            catImgState = IMG_TAP_BLD;
-        else if (catTapRecord == TAP_RIGHT)
-            catImgState = IMG_TAP_BRD;
-        catTapRecord = catTap;
-        break;
-    case IMG_TAP_R:
-        tapCount++;
-        appendHeart(true);
-        catImgState = IMG_TAP_RD;
-    case IMG_TAP_RD:
-        if (catTapRecord == TAP_BOTH)
-            catImgState = IMG_TAP_BRD;
-        else if (catTapRecord == TAP_LEFT)
-            catImgState = IMG_TAP_BLD;
-        catTapRecord = catTap;
-        break;
-    case IMG_TAP_B:
-        tapCount++;
-        appendHeart(true);
-        appendHeart(false);
-        catImgState = IMG_TAP_BD;
-    case IMG_TAP_BD:
-    IMG_TAP_BD:
-        if (catTapRecord == TAP_LEFT)
-            catImgState = IMG_TAP_LD;
-        else if (catTapRecord == TAP_RIGHT)
+    if (millis() - lastMillis >= TAP_INTERVAL_MS) {
+        lastMillis = millis();
+
+        switch (catImgState) {
+        case IMG_TAP_R:
+            appendHeart(RIGHT);
             catImgState = IMG_TAP_RD;
-        catTapRecord = catTap;
-        break;
-    case IMG_TAP_BLD:
-        tapCount++;
-        appendHeart(true);
-        catImgState = IMG_TAP_BD;
-        goto IMG_TAP_BD;
-    case IMG_TAP_BRD:
-        tapCount++;
-        appendHeart(false);
-        catImgState = IMG_TAP_BD;
-        goto IMG_TAP_BD;
+            break;
+        case IMG_TAP_RD:
+            tapCount++;
+            switch (catTap) {
+            case TAP_NONE:
+                return PREP;
+            case TAP_LEFT:
+                catImgState = IMG_TAP_BLD;
+                break;
+            case TAP_BOTH:
+                catImgState = IMG_TAP_BRD;
+                break;
+            }
+            break;
+        case IMG_TAP_L:
+            appendHeart(LEFT);
+            catImgState = IMG_TAP_LD;
+            break;
+        case IMG_TAP_LD:
+            tapCount++;
+            switch (catTap) {
+            case TAP_NONE:
+                return PREP;
+            case TAP_RIGHT:
+                catImgState = IMG_TAP_BRD;
+                break;
+            case TAP_BOTH:
+                catImgState = IMG_TAP_BLD;
+                break;
+            }
+            break;
+        case IMG_TAP_B:
+            appendHeart(LEFT);
+            appendHeart(RIGHT);
+            catImgState = IMG_TAP_BD;
+            break;
+        case IMG_TAP_BD:
+            tapCount++;
+            switch (catTap) {
+            case TAP_NONE:
+                return PREP;
+            case TAP_LEFT:
+                catImgState = IMG_TAP_LD;
+                break;
+            case TAP_RIGHT:
+                catImgState = IMG_TAP_RD;
+                break;
+            }
+            break;
+        case IMG_TAP_BLD:
+            appendHeart(RIGHT);
+            catImgState = IMG_TAP_BD;
+            break;
+        case IMG_TAP_BRD:
+            appendHeart(LEFT);
+            catImgState = IMG_TAP_BD;
+            break;
+        }
     }
-    catImgStatePre = catImgState;
 
-    if (catTapRecord == TAP_NONE) {
-        catState = PREP;
-        // stateInit = true;
-    }
+    return TAP;
 }
 
-void appendHeart(bool rightOrLeft)
+void appendHeart(int leftRight)
 {
-    if (rightOrLeft) // RIGHT
-        heartQueue.appendHeart(HEART_IMG_LIFE, HEART_IMG_R_X_DEFAULT + random(HEART_IMG_X_RANDOM), SCREEN_HEIGHT / 2 + HEART_IMG_R_Y_DEFAULT - HEART_IMG_HEIGHT - random(HEART_IMG_Y_RANDOM));
-    else // LEFT
-        heartQueue.appendHeart(HEART_IMG_LIFE, HEART_IMG_L_X_DEFAULT - random(HEART_IMG_X_RANDOM), SCREEN_HEIGHT / 2 + HEART_IMG_L_Y_DEFAULT - HEART_IMG_HEIGHT - random(HEART_IMG_Y_RANDOM));
+    if (leftRight == LEFT) { // left
+        heartQueue.appendHeart(HEART_IMG_LIFE, HEART_IMG_L_X_DEFAULT - random(HEART_IMG_X_RANDOM),
+            SCREEN_HEIGHT / 2 + HEART_IMG_L_Y_DEFAULT - HEART_IMG_HEIGHT - random(HEART_IMG_Y_RANDOM));
+    }
+    else { // right
+        heartQueue.appendHeart(HEART_IMG_LIFE, HEART_IMG_R_X_DEFAULT + random(HEART_IMG_X_RANDOM),
+            SCREEN_HEIGHT / 2 + HEART_IMG_R_Y_DEFAULT - HEART_IMG_HEIGHT - random(HEART_IMG_Y_RANDOM));
+    }
 }
 
 void readKey(void)
 {
     catTap = !digitalRead(PIN_RIGHT) + !digitalRead(PIN_LEFT) * 2;
+    
+    if (catTap != TAP_NONE) {
+        lastActivityMillis = millis();
+    }
+
+
+}
+
+void goToDeepSleep(void)
+{
+    display.clearDisplay();
+    display.display();
+
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << PIN_RIGHT | 1ULL << PIN_LEFT, ESP_GPIO_WAKEUP_GPIO_LOW);
+    Serial.flush();
+    esp_deep_sleep_start();
 }
