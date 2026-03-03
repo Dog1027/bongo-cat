@@ -7,8 +7,8 @@
 #include "cat.h"
 #include "heartQueue.h"
 
-#define SCREEN_WIDTH 128 // OLED 寬度像素
-#define SCREEN_HEIGHT 64 // OLED 高度像素
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 #define PIN_LEFT 1
 #define PIN_RIGHT 2
@@ -19,9 +19,9 @@
 
 Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
 
-#define IDLE_INTERVAL_MS 100
-#define PREP_WAIT_MS 2000
-#define TAP_INTERVAL_MS 300
+#define IDLE_INTERVAL_MS 200
+#define PREP_WAIT_MS 1600
+#define TAP_INTERVAL_MS 50
 
 #define HEART_IMG_LIFE hollowHeartBoomLargerAllArray_LEN - 1
 #define HEART_IMG_WIDTH hollowHeartBoomLargerAllArray_W
@@ -35,7 +35,7 @@ Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
 #define HEART_IMG_X_RANDOM 25
 #define HEART_IMG_Y_RANDOM 24
 
-#define INACTIVITY_SLEEP_MS (30UL * 1000UL)
+#define INACTIVITY_SLEEP_MS (60UL * 1000UL)
 
 enum catState {
     IDLE,
@@ -240,10 +240,10 @@ enum catState tapState(bool init)
         switch (catImgState) {
         case IMG_TAP_R:
             appendHeart(RIGHT);
+            tapCount++;
             catImgState = IMG_TAP_RD;
             break;
         case IMG_TAP_RD:
-            tapCount++;
             switch (catTap) {
             case TAP_NONE:
                 return PREP;
@@ -257,10 +257,10 @@ enum catState tapState(bool init)
             break;
         case IMG_TAP_L:
             appendHeart(LEFT);
+            tapCount++;
             catImgState = IMG_TAP_LD;
             break;
         case IMG_TAP_LD:
-            tapCount++;
             switch (catTap) {
             case TAP_NONE:
                 return PREP;
@@ -275,10 +275,10 @@ enum catState tapState(bool init)
         case IMG_TAP_B:
             appendHeart(LEFT);
             appendHeart(RIGHT);
+            tapCount++;
             catImgState = IMG_TAP_BD;
             break;
         case IMG_TAP_BD:
-            tapCount++;
             switch (catTap) {
             case TAP_NONE:
                 return PREP;
