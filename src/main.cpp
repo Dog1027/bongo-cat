@@ -7,33 +7,33 @@
 #include "cat.h"
 #include "heartQueue.h"
 
-#define SCREEN_WIDTH 128
+#define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
 
-#define PIN_LEFT 1
-#define PIN_RIGHT 2
-#define PIN_OLED_SDA 3
-#define PIN_OLED_SCL 4
+#define PIN_LEFT       1
+#define PIN_RIGHT      2
+#define PIN_OLED_SDA   3
+#define PIN_OLED_SCL   4
 #define PIN_OLED_RESET -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define OLED_I2C_ADDR 0x3C
+#define OLED_I2C_ADDR  0x3C
 
 Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
 
 #define IDLE_INTERVAL_MS 200
-#define PREP_WAIT_MS 1600
-#define TAP_INTERVAL_MS 50
+#define PREP_WAIT_MS     1600
+#define TAP_INTERVAL_MS  50
 
-#define HEART_IMG_LIFE hollowHeartBoomLargerAllArray_LEN - 1
-#define HEART_IMG_WIDTH hollowHeartBoomLargerAllArray_W
+#define HEART_IMG_LIFE   hollowHeartBoomLargerAllArray_LEN - 1
+#define HEART_IMG_WIDTH  hollowHeartBoomLargerAllArray_W
 #define HEART_IMG_HEIGHT hollowHeartBoomLargerAllArray_H
-#define HEART_IMG_ARRAY hollowHeartBoomLargerAllArray
+#define HEART_IMG_ARRAY  hollowHeartBoomLargerAllArray
 
 #define HEART_IMG_R_X_DEFAULT 90
 #define HEART_IMG_R_Y_DEFAULT 32
 #define HEART_IMG_L_X_DEFAULT 28
 #define HEART_IMG_L_Y_DEFAULT 32
-#define HEART_IMG_X_RANDOM 25
-#define HEART_IMG_Y_RANDOM 24
+#define HEART_IMG_X_RANDOM    25
+#define HEART_IMG_Y_RANDOM    24
 
 #define INACTIVITY_SLEEP_MS (60UL * 1000UL)
 
@@ -319,12 +319,10 @@ void appendHeart(int leftRight)
 void readKey(void)
 {
     catTap = !digitalRead(PIN_RIGHT) + !digitalRead(PIN_LEFT) * 2;
-    
+
     if (catTap != TAP_NONE) {
         lastActivityMillis = millis();
     }
-
-
 }
 
 void goToDeepSleep(void)

@@ -9,4 +9,7 @@
         BeforeElse: true,
         AfterFunction: true,
     },
+    AlignConsecutiveMacros: {
+        Enabled: true
+    }
 }
