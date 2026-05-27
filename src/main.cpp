@@ -21,7 +21,7 @@ Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
 
 #define IDLE_INTERVAL_MS 200
 #define PREP_WAIT_MS     1600
-#define TAP_INTERVAL_MS  50
+#define TAP_INTERVAL_MS  10
 
 #define HEART_IMG_LIFE   hollowHeartBoomLargerAllArray_LEN - 1
 #define HEART_IMG_WIDTH  hollowHeartBoomLargerAllArray_W
@@ -275,7 +275,7 @@ enum catState tapState(bool init)
         case IMG_TAP_B:
             appendHeart(LEFT);
             appendHeart(RIGHT);
-            tapCount++;
+            tapCount += 2;
             catImgState = IMG_TAP_BD;
             break;
         case IMG_TAP_BD:
