@@ -81,7 +81,8 @@ HeartQueue heartQueue;
 uint8_t catTap = TAP_NONE;
 uint8_t catImgState = IMG_NONE;
 
-unsigned long tapCount = 0;
+// Kept in RTC memory so the count survives deep sleep (reset on power loss).
+RTC_DATA_ATTR unsigned long tapCount = 0;
 unsigned long lastActivityMillis = 0;
 
 void readKey(void);
