@@ -247,10 +247,10 @@ enum catState tapState(bool init)
             switch (catTap) {
             case TAP_NONE:
                 return PREP;
-            case TAP_LEFT:
-                catImgState = IMG_TAP_BLD;
+            case TAP_LEFT: // right released, left pressed: fresh left tap
+                catImgState = IMG_TAP_L;
                 break;
-            case TAP_BOTH:
+            case TAP_BOTH: // right held, left newly pressed
                 catImgState = IMG_TAP_BRD;
                 break;
             }
@@ -264,10 +264,10 @@ enum catState tapState(bool init)
             switch (catTap) {
             case TAP_NONE:
                 return PREP;
-            case TAP_RIGHT:
-                catImgState = IMG_TAP_BRD;
+            case TAP_RIGHT: // left released, right pressed: fresh right tap
+                catImgState = IMG_TAP_R;
                 break;
-            case TAP_BOTH:
+            case TAP_BOTH: // left held, right newly pressed
                 catImgState = IMG_TAP_BLD;
                 break;
             }
@@ -292,10 +292,12 @@ enum catState tapState(bool init)
             break;
         case IMG_TAP_BLD:
             appendHeart(RIGHT);
+            tapCount++;
             catImgState = IMG_TAP_BD;
             break;
         case IMG_TAP_BRD:
             appendHeart(LEFT);
+            tapCount++;
             catImgState = IMG_TAP_BD;
             break;
         }
