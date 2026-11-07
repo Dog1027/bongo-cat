@@ -26,14 +26,15 @@ void HeartQueue::appendHeart(size_t life, size_t x, size_t y) {
 }
 
 void HeartQueue::process() {
+    // Hearts all start with the same life and are queued in order, so expired
+    // ones are always at the head. Drop them first, then age the rest; removing
+    // inside the aging loop would shift indices and skip a heart.
+    while (len() > 0 && getHeart(0)->life == 0) {
+        dequeue();
+    }
+
     for (size_t i = 0; i < len(); i++) {
-        Heart *h = getHeart(i);
-        if (h->life == 0) {
-            dequeue();
-        }
-        else {
-            h->life--;
-        }
+        getHeart(i)->life--;
     }
 }
 
