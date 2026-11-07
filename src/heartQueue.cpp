@@ -17,7 +17,7 @@ void HeartQueue::dequeue() {
     }
 }
 
-void HeartQueue::appendHeart(size_t life, size_t x, size_t y) {
+void HeartQueue::appendHeart(uint8_t life, int16_t x, int16_t y) {
     Heart h;
     h.life = life;
     h.x = x;
