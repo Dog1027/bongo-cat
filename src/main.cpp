@@ -316,9 +316,22 @@ void appendHeart(int leftRight)
     }
 }
 
+// A new button reading is accepted only after it has held steady this long.
+#define KEY_DEBOUNCE_MS 20
+
 void readKey(void)
 {
-    catTap = !digitalRead(PIN_RIGHT) + !digitalRead(PIN_LEFT) * 2;
+    static uint8_t lastRaw = TAP_NONE;
+    static unsigned long lastChangeMillis = 0;
+
+    uint8_t raw = !digitalRead(PIN_RIGHT) + !digitalRead(PIN_LEFT) * 2;
+    if (raw != lastRaw) {
+        lastRaw = raw;
+        lastChangeMillis = millis();
+    }
+    if (millis() - lastChangeMillis >= KEY_DEBOUNCE_MS) {
+        catTap = raw;
+    }
 
     if (catTap != TAP_NONE) {
         lastActivityMillis = millis();
