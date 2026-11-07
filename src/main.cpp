@@ -37,6 +37,10 @@ Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, PIN_OLED_RESET);
 
 #define INACTIVITY_SLEEP_MS (60UL * 1000UL)
 
+// One heart animation frame per interval, independent of how fast loop() runs.
+// About the same as the old per-loop speed (one 400 kHz I2C display refresh).
+#define HEART_INTERVAL_MS 30
+
 enum catState {
     IDLE,
     PREP,
@@ -117,8 +121,13 @@ void setup()
 
 void loop()
 {
+    static unsigned long lastHeartMillis = 0;
+
     readKey();
-    heartQueue.process();
+    if (millis() - lastHeartMillis >= HEART_INTERVAL_MS) {
+        lastHeartMillis = millis();
+        heartQueue.process();
+    }
     catLogic();
     imgProcess();
 
