@@ -1,24 +1,26 @@
+#pragma once
+
 #include <Arduino.h>
 
 #define HEART_BUF_LEN 16 // Must be a power of 2
 
 typedef struct {
-  size_t life;
-  size_t x;
-  size_t y;
+  uint8_t life;
+  int16_t x;
+  int16_t y;
 } Heart;
 
 class HeartQueue {
 private:
-  size_t head;
-  size_t tail;
+  size_t head = 0;
+  size_t tail = 0;
   Heart hearts[HEART_BUF_LEN];
 
   void enqueue(Heart h);
   void dequeue();
 public:
   size_t len();
-  void appendHeart(size_t life, size_t x, size_t y);
+  void appendHeart(uint8_t life, int16_t x, int16_t y);
   void process();
   Heart *getHeart(size_t i);
 };

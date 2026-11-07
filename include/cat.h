@@ -1,3 +1,7 @@
+#pragma once
+
+#include <Arduino.h>
+
 const unsigned char catIdle1 [] PROGMEM = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -494,7 +498,7 @@ const unsigned char catTapBD [] PROGMEM = {
 #define catTapAllArray_LEN       8
 #define catAllArray_LEN          (catIdleAllArray_LEN + catPrepareAllArray_LEN + catTapAllArray_LEN)
 
-const unsigned char* catAllArray[catAllArray_LEN] = {
+const unsigned char* const catAllArray[catAllArray_LEN] = {
 	catIdle1,
 	catIdle2,
 	catIdle3,
@@ -522,7 +526,7 @@ const unsigned char heart13 [] PROGMEM = {
 };
 
 const int heartAllArray_LEN = 2;
-const unsigned char* heartAllArray[2] = {
+const unsigned char* const heartAllArray[2] = {
   heart7,
 	heart13
 };
@@ -603,7 +607,7 @@ const unsigned char heart10 [] PROGMEM = {
 #define heartAllArray_LEN 10
 #define heartAllArray_W 15
 #define heartAllArray_H 32
-const unsigned char* heartAllArray[heartAllArray_LEN] = {
+const unsigned char* const heartAllArray[heartAllArray_LEN] = {
 	heart1,
 	heart2,
 	heart3,
@@ -686,7 +690,7 @@ const unsigned char heartBoom12 [] PROGMEM = {
 #define heartBoomAllArray_LEN 13
 #define heartBoomAllArray_W 9
 #define heartBoomAllArray_H 14
-const unsigned char* heartBoomAllArray[heartBoomAllArray_LEN] = {
+const unsigned char* const heartBoomAllArray[heartBoomAllArray_LEN] = {
 	heartBoom0,
 	heartBoom1,
 	heartBoom2,
@@ -784,7 +788,7 @@ const unsigned char hollowHeartBoomhollowHeartBoom13 [] PROGMEM = {
 #define hollowHeartBoomAllArray_LEN 13
 #define hollowHeartBoomAllArray_W 9
 #define hollowHeartBoomAllArray_H 24
-const unsigned char* hollowHeartBoomAllArray[hollowHeartBoomAllArray_LEN] = {
+const unsigned char* const hollowHeartBoomAllArray[hollowHeartBoomAllArray_LEN] = {
 	hollowHeartBoomhollowHeartBoom1,
 	hollowHeartBoomhollowHeartBoom2,
 	hollowHeartBoomhollowHeartBoom3,
@@ -883,7 +887,7 @@ const unsigned char hollowHeartBoomLarger12 [] PROGMEM = {
 #define hollowHeartBoomLargerAllArray_LEN 13
 #define hollowHeartBoomLargerAllArray_W 9
 #define hollowHeartBoomLargerAllArray_H 24
-const unsigned char* hollowHeartBoomLargerAllArray[hollowHeartBoomLargerAllArray_LEN] = {
+const unsigned char* const hollowHeartBoomLargerAllArray[hollowHeartBoomLargerAllArray_LEN] = {
 	hollowHeartBoomLarger1,
 	hollowHeartBoomLarger2,
 	hollowHeartBoomLarger3,
