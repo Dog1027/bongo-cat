@@ -329,6 +329,9 @@ void goToDeepSleep(void)
 {
     display.clearDisplay();
     display.display();
+    // Put the OLED controller to sleep too; a blank screen still draws power.
+    // display.begin() in setup() turns it back on after wake-up.
+    display.oled_command(SH110X_DISPLAYOFF);
 
     esp_deep_sleep_enable_gpio_wakeup(1ULL << PIN_RIGHT | 1ULL << PIN_LEFT, ESP_GPIO_WAKEUP_GPIO_LOW);
     Serial.flush();
